@@ -18,7 +18,7 @@ struct Sensor {
     sf::Vector2f forward;
 };
 
-namespace Config {
+namespace config {
     unsigned WIDTH;
     unsigned HEIGHT;
     unsigned NUM_AGENTS;
@@ -26,14 +26,15 @@ namespace Config {
 
 
 namespace constant {
+    double ALPHA = 0.001;
+    int TIME = 0;
+
     const float PI = 3.1415926535897932384626433832795028f;
-    const int FPS = 60;
+    const int FPS = 120;
 }
 
 namespace food {
-    const float RADIUS = 8.0f;
-    const float OFFSET = 500.0f;
-    const float DECAY = 5.0f;
+    const float RADIUS = 3.0f;
     sf::Color COLOR = sf::Color::Green;
 }
 
@@ -45,7 +46,7 @@ namespace mode {
         TWO_POINTS,
         THREE_POINTS
     };
-    Type CURRENT = CENTER;
+    Type CURRENT = CIRCLE;
 }
 
 namespace frame {
@@ -59,29 +60,32 @@ namespace frame {
 }
 
 namespace sensor {
-    const float ANGLE = 45.0f;
-    const int DISTANCE = 9.0f;
+    const float BOOST = 5.0f;
+    const float DISTANCE = 15.0f;
+    const float ANGLE = 22.5f;
 }
 
 namespace agent {
-    float BEST_FITNESS = std::numeric_limits<float>::max();
-    float WORST_FITNESS = std::numeric_limits<float>::min();
-
-    float SPEED = 1.0f;
+    float SPEED = 0.5f;
     float ROTATION_ANGLE = 22.5f;
     sf::Color COLOR = sf::Color(255, 255, 255, 70);
 }
 
 namespace population {
-    float BEST_FITNES = std::numeric_limits<float>::max();
-    float WORST_FITNES = std::numeric_limits<float>::min();
+    float LOCAL_TIME = 0.0f;
+    sf::Vector2f BEST_POSITION = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+    float BEST_FITNESS = std::numeric_limits<float>::max();
+    float WORST_FITNESS = std::numeric_limits<float>::min();
+    //float BEST_WEIGHT = std::numeric_limits<float>::min();
+    float MAX_TIME = std::numeric_limits<float>::max();
 };
 
 namespace simulation {
     sf::Vector2f BEST_FOOD_POS = { 0.0f,0.0f };
-    const float DECAY_RATE = 0.97f;
+    const float DECAY_RATE = 0.9f;
     const float BOUNDARY_OFFSET = 0.0f;
-    const float BLUR_STRENGTH = 0.1f;
+    const float BLUR_STRENGTH = 0.15f;
+    const float A_DIFFUSION_STRENGTH = 1.0f;
 }
 
 namespace shader {

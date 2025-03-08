@@ -41,47 +41,52 @@ struct Button {
     std::function<void()> action;
 };
 
-// Функция для вычисления гиперболического тангенса
-double tanh(double x) {
-    return (exp(x) - exp(-x)) / (exp(x) + exp(-x));
+float CalculateA() {
+    const float max_time_safe = population::MAX_TIME + 1e-5f;
+    const float ratio = population::LOCAL_TIME / max_time_safe;
+
+    const float arg = -ratio + 1.0f;
+    const float clamped_arg = std::clamp(arg, -0.99999f, 0.99999f);
+
+    return std::atanh(clamped_arg);
 }
 
-// Функция для вычисления arctanh
-double arctanh(double x) {
-    return 0.5 * log((1 + x) / (1 - x));
+float CalculateVB() {
+    return (rand() % 2000 - 1000) / 1000.0f * CalculateA() * simulation::A_DIFFUSION_STRENGTH;
 }
 
-float distance(const sf::Vector2f& a, const sf::Vector2f& b) {
+float CalculateVC() {
+    return 0.5f * (1.0f + cos(population::LOCAL_TIME * 0.01f));
+}
+
+float Distance(const sf::Vector2f& a, const sf::Vector2f& b) {
+    return static_cast<float>(std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2)));
+}
+
+float FitnessFunc(const sf::Vector2f& a, const sf::Vector2f& b) {
     return static_cast<float>(std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2)));
 }
 
 bool IsTopHalf(float current_fitness) {
-    return current_fitness > std::abs(population::BEST_FITNES - population::WORST_FITNES) / 2.0f;
+    return current_fitness > std::abs(population::BEST_FITNESS - population::WORST_FITNESS) / 2.0f;
 }
 
 float CalculateAgentWeight(const sf::Vector2f& agent_pos, const sf::Vector2f& food_pos) {
-    // 1. Рассчитываем расстояние от агента до еды
-    float fitness = distance(agent_pos, food_pos); // Фитнес = расстояние
+    float fitness = FitnessFunc(agent_pos, food_pos);
 
-    agent::BEST_FITNESS = std::min(agent::BEST_FITNESS, fitness);
-    agent::WORST_FITNESS = std::max(agent::WORST_FITNESS, fitness);
-    // 3. Нормализуем расстояние в диапазон [0, 1]
-    if (agent::WORST_FITNESS == agent::BEST_FITNESS) return 1.0f;
+    population::BEST_FITNESS = std::min(population::BEST_FITNESS, fitness);
+    population::WORST_FITNESS = std::max(population::WORST_FITNESS, fitness);
 
-    fitness = (fitness - agent::BEST_FITNESS) / (agent::WORST_FITNESS - agent::BEST_FITNESS);
-    //normalized = std::max(0.0f, std::min(1.0f, normalized)); // Ограничиваем
+    if (population::WORST_FITNESS == population::BEST_FITNESS) return 1.0f;
 
-    // 4. Формула веса (адаптированная из SMA)
+    fitness = (fitness - population::BEST_FITNESS) / (population::WORST_FITNESS - population::BEST_FITNESS);
+
     float r = 0.5f;
     float weight;
-    if (IsTopHalf(fitness)) {
-        // Первые 50% агентов (ближе к еде)
-        weight = 1.0f + r * std::log(fitness + 1.0f);
-    }
-    else {
-        // Остальные 50% (дальше от еды)
-        weight = 1.0f - r * std::log(fitness + 1.0f);
-    }
+    if (IsTopHalf(fitness))  weight = 1.0f + r * std::log(fitness + 1.0f);
+    else weight = 1.0f - r * std::log(fitness + 1.0f);
+
+    //population::BEST_WEIGHT = std::max(population::BEST_WEIGHT, weight);
     return weight;
 }
 
@@ -94,7 +99,7 @@ float CalculateCombinedWeight(const sf::Vector2f& agent_pos,
 
     for (const auto& food : food_sources) {
         float w = CalculateAgentWeight(agent_pos, food);
-        float influence = 1.0f / distance(agent_pos, food); // Чем ближе, тем больше влияние
+        float influence = 1.0f / FitnessFunc(agent_pos, food);
         total_weight += w * influence;
         sum_influence += influence;
     }
@@ -104,10 +109,10 @@ float CalculateCombinedWeight(const sf::Vector2f& agent_pos,
 
 void InitiliseConfig() {
     switch (frame::CURRENT) {
-    case frame::MINI:  Config::WIDTH = 500;   Config::HEIGHT = 500;   Config::NUM_AGENTS = 5'000;    break;
-    case frame::SMALL:  Config::WIDTH = 640;   Config::HEIGHT = 480;   Config::NUM_AGENTS = 25'000;    break;
-    case frame::MEDIUM: Config::WIDTH = 1280;  Config::HEIGHT = 720;   Config::NUM_AGENTS = 100'000;    break;
-    case frame::BIG:    Config::WIDTH = 1920;  Config::HEIGHT = 1080;  Config::NUM_AGENTS = 1'000'000;   break;
+    case frame::MINI:  config::WIDTH = 320;   config::HEIGHT = 180;   config::NUM_AGENTS = 5000;           break;
+    case frame::SMALL:  config::WIDTH = 500;   config::HEIGHT = 500;   config::NUM_AGENTS = 10'000;      break;
+    case frame::MEDIUM: config::WIDTH = 1280;  config::HEIGHT = 720;   config::NUM_AGENTS = 100'000;    break;
+    case frame::BIG:    config::WIDTH = 1920;  config::HEIGHT = 1080;  config::NUM_AGENTS = 1'000'000;  break;
     }
 }
 
@@ -117,15 +122,15 @@ std::pair<sf::Vector2f, float> InitiliseMode() {
 
     switch (mode::CURRENT) {
     case mode::NOISE: {
-        position = { static_cast<float>(Hash(rand()) % Config::WIDTH), static_cast<float>(Hash(rand()) % Config::HEIGHT) };
+        position = { static_cast<float>(Hash(rand()) % config::WIDTH), static_cast<float>(Hash(rand()) % config::HEIGHT) };
         heading = static_cast<float>(Hash(rand()) % 360);
         break;
     }
     case mode::CIRCLE: {
-        const float center_x = Config::WIDTH / 2.0f;
-        const float center_y = Config::HEIGHT / 2.0f;
+        const float center_x = config::WIDTH / 2.0f;
+        const float center_y = config::HEIGHT / 2.0f;
 
-        const float max_radius = std::min(Config::WIDTH, Config::HEIGHT) / 2.0f * 0.8f;
+        const float max_radius = std::min(config::WIDTH, config::HEIGHT) / 2.0f * 0.8f;
         float random_factor = static_cast<float>(rand()) / RAND_MAX;
         float r = sqrtf(random_factor) * max_radius;
         float theta = static_cast<float>(rand()) / RAND_MAX * 2.0f * constant::PI;
@@ -143,8 +148,8 @@ std::pair<sf::Vector2f, float> InitiliseMode() {
     }
     case mode::CENTER: {
         position = {
-            static_cast<float>(Config::WIDTH / 2),
-            static_cast<float>(Config::HEIGHT / 2)
+            static_cast<float>(config::WIDTH / 2),
+            static_cast<float>(config::HEIGHT / 2)
         };
         heading = static_cast<float>(rand() % 360);
         break;
@@ -154,10 +159,10 @@ std::pair<sf::Vector2f, float> InitiliseMode() {
         uint32_t random = Hash(static_cast<uint32_t>(Hash(heading)));
 
         if (ScaleToRange01(random) >= 0.5) {
-            position = { static_cast<float>(Config::WIDTH / 3),  static_cast<float>(Config::HEIGHT / 2) };
+            position = { static_cast<float>(config::WIDTH / 3),  static_cast<float>(config::HEIGHT / 2) };
         }
         else {
-            position = { static_cast<float>(2*Config::WIDTH / 3),  static_cast<float>(Config::HEIGHT / 2) };
+            position = { static_cast<float>(2*config::WIDTH / 3),  static_cast<float>(config::HEIGHT / 2) };
         }
         break;
     }
@@ -166,13 +171,13 @@ std::pair<sf::Vector2f, float> InitiliseMode() {
         uint32_t random = Hash(static_cast<uint32_t>(Hash(heading)));
 
         if (ScaleToRange01(random) <= 0.3) {
-            position = { static_cast<float>(Config::WIDTH / 2),  static_cast<float>(2 * Config::HEIGHT / 3) };
+            position = { static_cast<float>(config::WIDTH / 2),  static_cast<float>(2 * config::HEIGHT / 3) };
         }
         else if (ScaleToRange01(random) <= 0.6) {
-            position = { static_cast<float>(Config::WIDTH / 3),  static_cast<float>(Config::HEIGHT / 3) };
+            position = { static_cast<float>(config::WIDTH / 3),  static_cast<float>(config::HEIGHT / 3) };
         }
         else {
-            position = { static_cast<float>(2 * Config::WIDTH / 3),  static_cast<float>(Config::HEIGHT / 3) };
+            position = { static_cast<float>(2 * config::WIDTH / 3),  static_cast<float>(config::HEIGHT / 3) };
         }
         break;
     }
@@ -184,20 +189,20 @@ std::pair<sf::Vector2f, float> InitiliseMode() {
 
 void CreateButtons(std::vector<Button>& buttons, const sf::Font& font) {
     buttons.emplace_back(
-        sf::Vector2f(Config::WIDTH - 200, 10), "+Speed", font, []() {
+        sf::Vector2f(config::WIDTH - 200, 10), "+Speed", font, []() {
             agent::SPEED += 0.5f;
         });
 
     buttons.emplace_back(
-        sf::Vector2f(Config::WIDTH - 100, 10), "-Speed", font, []() {
+        sf::Vector2f(config::WIDTH - 100, 10), "-Speed", font, []() {
             agent::SPEED = std::max(0.1f, agent::SPEED - 0.5f);
         });
     buttons.emplace_back(
-        sf::Vector2f(Config::WIDTH - 200, 50), "Pause", font, []() {
+        sf::Vector2f(config::WIDTH - 200, 50), "Pause", font, []() {
             agent::SPEED = 0;
         });
     buttons.emplace_back(
-        sf::Vector2f(Config::WIDTH - 100, 50), "Resume", font, []() {
+        sf::Vector2f(config::WIDTH - 100, 50), "Resume", font, []() {
             agent::SPEED += 1.0f;
         });
 }
