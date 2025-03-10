@@ -30,7 +30,7 @@ namespace constant {
     int TIME = 0;
 
     const float PI = 3.1415926535897932384626433832795028f;
-    const int FPS = 120;
+    const int FPS = 40;
 }
 
 namespace food {
@@ -66,8 +66,8 @@ namespace sensor {
 }
 
 namespace agent {
-    float SPEED = 0.5f;
-    float ROTATION_ANGLE = 22.5f;
+    float SPEED = 0.8f;
+    float ROTATION_ANGLE = 45.0f;
     sf::Color COLOR = sf::Color(255, 255, 255, 70);
 }
 
@@ -80,7 +80,7 @@ namespace population {
 
 namespace simulation {
     int ITER = 1;
-    int MAX_ITERATION = 100'000;
+    int MAX_ITERATION =  10;
     sf::Vector2f BEST_FOOD_POS = { 0.0f,0.0f };
     const float DECAY_RATE = 0.97f;
     const float BOUNDARY_OFFSET = 0.0f;

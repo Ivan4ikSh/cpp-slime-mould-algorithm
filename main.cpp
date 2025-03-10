@@ -158,7 +158,7 @@ int main() {
                 agents_vertices[i].position = agents[i]->GetPos();
                 //agents_vertices[i].color = agent::COLOR;
 
-                //agents_vertices[i].color = sf::Color(100, 100, 100);
+                //agents_vertices[i].color = sf::Color(10, 0, 10);
 
                 agents_vertices[i].color = sf::Color(
                     10 * agents[i]->GetWeight(),
@@ -166,11 +166,9 @@ int main() {
                     255
                 );
                 });
-
-            trail_map.draw(agents_vertices, render_states);
-            trail_map.display();
         }
-        
+        trail_map.draw(agents_vertices, render_states);
+        trail_map.display();
 
         float delta_time = clock.restart().asSeconds();
         if (delta_time > 0) {

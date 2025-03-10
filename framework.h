@@ -102,6 +102,7 @@ float CalculateCombinedWeight(const sf::Vector2f& agent_pos,
 void InitiliseConfig() {
     switch (frame::CURRENT) {
     case frame::MINI:   config::WIDTH = 320;   config::HEIGHT = 180;   config::NUM_AGENTS = 5'000;
+    //case frame::MINI:   config::WIDTH = 200;   config::HEIGHT = 200;   config::NUM_AGENTS = 800;
         break;
     case frame::SMALL:  config::WIDTH = 500;   config::HEIGHT = 500;   config::NUM_AGENTS = 10'000;
         break;

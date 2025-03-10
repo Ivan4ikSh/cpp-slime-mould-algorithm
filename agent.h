@@ -15,9 +15,9 @@ public:
     }
 
     void Update(sf::Image& trail_map, const std::vector<sf::Vector2f>& food_positions) {
-        weight_ = CalculateCombinedWeight(position_, food_positions);
-
+        weight_ = 0.0f;
         if (!food_positions.empty()) {
+            weight_ = CalculateCombinedWeight(position_, food_positions);
             float fitness = std::numeric_limits<float>::max();
             for (const auto& food : food_positions) {
                 float fitness_func = FitnessFunc(position_, food);
@@ -40,15 +40,8 @@ public:
             if (random < p) choosen_food_position_ = population::BEST_POSITION + vb * (weight_ * XA - XB);
             else choosen_food_position_ = vc * position_;
 
-            //choosen_food_position.x = std::clamp(choosen_food_position.x, 0.0f, static_cast<float>(config::WIDTH));
-            //choosen_food_position.y = std::clamp(choosen_food_position.y, 0.0f, static_cast<float>(config::HEIGHT));
-            
-            //heading_ = CalculateDirection(choosen_food_position);
-            //position_.x += (choosen_food_position.x - position_.x) * (agent::SPEED / config::WIDTH);
-            //position_.y += (choosen_food_position.y - position_.y) * (agent::SPEED / config::HEIGHT);
-            
-            //choosen_food_position_ = choosen_food_position;
-            //if (Distance(choosen_food_position, position_) < 10.0f) DepositPheromone(trail_map);
+            if (Distance(choosen_food_position_, position_) < 5.0f) DepositPheromone(trail_map);
+
         }
 
         Exploration(trail_map, food_positions);
@@ -80,12 +73,12 @@ private:
         if (new_position.x < 0 || new_position.x >= config::WIDTH || new_position.y < 0 || new_position.y >= config::HEIGHT) {
             if (new_position.x < 0) new_position.x += config::WIDTH;
             else if (new_position.x >= config::WIDTH) new_position.x -= config::WIDTH;
-        
+
             if (new_position.y < 0) new_position.y += config::HEIGHT;
             else if (new_position.y >= config::HEIGHT) new_position.y -= config::HEIGHT;
         }
         position_ = new_position;
-        
+
         FollowPheromoneGradient(trail_map, food_positions);
     }
 
@@ -122,18 +115,14 @@ private:
 
         // Вероятностный выбор направления
         float rand_val = static_cast<float>(rand()) / RAND_MAX;
-        if (rand_val < (r / sum)) {
-            heading_ += agent::ROTATION_ANGLE + dynamic_rotation_angle;
-        }
-        else if (rand_val < ((r + l) / sum)) {
-            heading_ -= agent::ROTATION_ANGLE + dynamic_rotation_angle;
-        }
+        if (rand_val < (r / sum)) heading_ += agent::ROTATION_ANGLE + dynamic_rotation_angle;
+        else if (rand_val < ((r + l) / sum)) heading_ -= agent::ROTATION_ANGLE + dynamic_rotation_angle;
     }
 
     void DepositPheromone(sf::Image& trail_map) {
         // Откладываем феромон при движении
         sf::Color color = trail_map.getPixel(position_.x, position_.y);
-        color.g = std::min(255, color.g + 50); // Усиливаем зеленый канал
+        color.r = std::min(255, color.r + 50);
         trail_map.setPixel(position_.x, position_.y, color);
     }
 
@@ -179,7 +168,7 @@ private:
         const float delta_x = target_pos.x - position_.x;
         const float delta_y = target_pos.y - position_.y;
         const float angle_rad = std::atan2(delta_y, delta_x);
-        
+
         float angle_deg = angle_rad * 180.0f / static_cast<float>(constant::PI);
         return std::fmod(angle_deg + 360.0f, 360.0f);
     }
