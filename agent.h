@@ -16,6 +16,7 @@ public:
 
     void Update(sf::Image& trail_map, const std::vector<sf::Vector2f>& food_positions) {
         weight_ = CalculateCombinedWeight(position_, food_positions);
+
         if (!food_positions.empty()) {
             float fitness = std::numeric_limits<float>::max();
             for (const auto& food : food_positions) {
@@ -29,21 +30,28 @@ public:
 
             const float p = tanh(std::abs(population::BEST_FITNESS - fitness)); // Учитываем минимизацию
             const float random = ScaleToRange01(Hash(rand()));
-            
+
             const sf::Vector2f XA = GetRandomAgentPosition();
             const sf::Vector2f XB = GetRandomAgentPosition();
             const float vb = CalculateVB();
             const float vc = CalculateVC();
             population::BEST_POSITION = FindGlobalBestFood(food_positions);
-            
+
             if (random < p) choosen_food_position_ = population::BEST_POSITION + vb * (weight_ * XA - XB);
             else choosen_food_position_ = vc * position_;
 
-            //choosen_food_position_.x = std::clamp(choosen_food_position_.x, 0.0f, static_cast<float>(config::HEIGHT));
-            //choosen_food_position_.y = std::clamp(choosen_food_position_.y, 0.0f, static_cast<float>(config::WIDTH));
+            //choosen_food_position.x = std::clamp(choosen_food_position.x, 0.0f, static_cast<float>(config::WIDTH));
+            //choosen_food_position.y = std::clamp(choosen_food_position.y, 0.0f, static_cast<float>(config::HEIGHT));
+            
+            //heading_ = CalculateDirection(choosen_food_position);
+            //position_.x += (choosen_food_position.x - position_.x) * (agent::SPEED / config::WIDTH);
+            //position_.y += (choosen_food_position.y - position_.y) * (agent::SPEED / config::HEIGHT);
+            
+            //choosen_food_position_ = choosen_food_position;
+            //if (Distance(choosen_food_position, position_) < 10.0f) DepositPheromone(trail_map);
         }
 
-        Exporation(trail_map, food_positions);
+        Exploration(trail_map, food_positions);
         UpdateCosSin();
 
         if (heading_ < 0) heading_ += 360;
@@ -60,10 +68,11 @@ private:
     float sin_heading_;
     sf::Vector2f position_;
     sf::Vector2f choosen_food_position_;
+    float choosen_food_direction_;
     Sensor sensor_;
     float weight_;
 
-    void Exporation(sf::Image& trail_map, const std::vector<sf::Vector2f>& food_positions) {
+    void Exploration(sf::Image& trail_map, const std::vector<sf::Vector2f>& food_positions) {
         sf::Vector2f new_position = position_;
         new_position.x += cos_heading_ * agent::SPEED;
         new_position.y += sin_heading_ * agent::SPEED;
@@ -71,24 +80,29 @@ private:
         if (new_position.x < 0 || new_position.x >= config::WIDTH || new_position.y < 0 || new_position.y >= config::HEIGHT) {
             if (new_position.x < 0) new_position.x += config::WIDTH;
             else if (new_position.x >= config::WIDTH) new_position.x -= config::WIDTH;
-
+        
             if (new_position.y < 0) new_position.y += config::HEIGHT;
             else if (new_position.y >= config::HEIGHT) new_position.y -= config::HEIGHT;
         }
         position_ = new_position;
+        
+        FollowPheromoneGradient(trail_map, food_positions);
+    }
 
+    void FollowPheromoneGradient(sf::Image& trail_map, const std::vector<sf::Vector2f>& food_positions) {
+        // Считываем значения сенсоров
         const sf::Vector2f right_sensor_pos = position_ + RotateVector(sensor_.right);
         const sf::Vector2f left_sensor_pos = position_ + RotateVector(sensor_.left);
         const sf::Vector2f forward_sensor_pos = position_ + RotateVector(sensor_.forward);
-                
+
         float r = GetSensorValue(trail_map, right_sensor_pos);
-        float l = GetSensorValue(trail_map, left_sensor_pos); 
+        float l = GetSensorValue(trail_map, left_sensor_pos);
         float f = GetSensorValue(trail_map, forward_sensor_pos);
-        
+
         float angle_boost = 1;
         float dynamic_rotation_angle = 0;
         if (!food_positions.empty()) {
-            const float sensor_boost = 8 * (1 + weight_);
+            const float sensor_boost = (1 + weight_);
             const float right_sensor_dst = Distance(choosen_food_position_, right_sensor_pos);
             const float left_sensor_dst = Distance(choosen_food_position_, left_sensor_pos);
             const float forward_sensor_dst = Distance(choosen_food_position_, forward_sensor_pos);
@@ -101,30 +115,30 @@ private:
             dynamic_rotation_angle = CalculateDynamicRotationAngle(Distance(position_, choosen_food_position_)) / angle_boost;
         }
 
-        if (f > l && f > r) return;
-        if (l > r) heading_ -= agent::ROTATION_ANGLE + dynamic_rotation_angle;
-        else if (r > l) heading_ += agent::ROTATION_ANGLE + dynamic_rotation_angle;
-        else {
-            if (ScaleToRange01(Hash(rand())) >= 0.5) heading_ += agent::ROTATION_ANGLE + dynamic_rotation_angle;
-            else heading_ -= agent::ROTATION_ANGLE + dynamic_rotation_angle;
+        float max_val = std::max({ r, l, f });
+        float sum = r + l + f;
+
+        if (sum == 0) return;
+
+        // Вероятностный выбор направления
+        float rand_val = static_cast<float>(rand()) / RAND_MAX;
+        if (rand_val < (r / sum)) {
+            heading_ += agent::ROTATION_ANGLE + dynamic_rotation_angle;
         }
+        else if (rand_val < ((r + l) / sum)) {
+            heading_ -= agent::ROTATION_ANGLE + dynamic_rotation_angle;
+        }
+    }
+
+    void DepositPheromone(sf::Image& trail_map) {
+        // Откладываем феромон при движении
+        sf::Color color = trail_map.getPixel(position_.x, position_.y);
+        color.g = std::min(255, color.g + 50); // Усиливаем зеленый канал
+        trail_map.setPixel(position_.x, position_.y, color);
     }
 
     sf::Vector2f GetRandomAgentPosition() {
         return population_[rand() % population_.size()]->position_;
-    }
-
-    sf::Vector2f FindGlobalBestFood(const std::vector<sf::Vector2f>& food) {
-        float min_dist = INFINITY;
-        sf::Vector2f best;
-        for (const auto& f : food) {
-            float d = FitnessFunc(position_, f);
-            if (d < min_dist) {
-                min_dist = d;
-                best = f;
-            }
-        }
-        return best;
     }
 
     sf::Vector2f RotateVector(const sf::Vector2f& vec) {
@@ -154,37 +168,37 @@ private:
     }
 
     float GetSensorValue(const sf::Image& trail_map, const sf::Vector2f& sensor_position) {
-        // Существующее значение следа
         const unsigned x = static_cast<unsigned>(std::clamp(sensor_position.x, 0.0f, static_cast<float>(config::WIDTH - 1)));
         const unsigned y = static_cast<unsigned>(std::clamp(sensor_position.y, 0.0f, static_cast<float>(config::HEIGHT - 1)));
 
-        float sensor_value = (trail_map.getPixel(x, y).r + trail_map.getPixel(x, y).g + trail_map.getPixel(x, y).b) / 3.0f * (1.0f + weight_);
-        return sensor_value;
+        sf::Color color = trail_map.getPixel(x, y);
+        return (color.r + color.g + color.b) / 3.0f;
     }
 
     float CalculateDirection(sf::Vector2f target_pos) {
         const float delta_x = target_pos.x - position_.x;
-        const float delta_y = target_pos.y - position_.y; // Инвертируем Y (SFML: ось Y вниз)
-
-        // 2. Вычисляем угол в радианах с помощью atan2
+        const float delta_y = target_pos.y - position_.y;
         const float angle_rad = std::atan2(delta_y, delta_x);
-
-        // 3. Конвертируем радианы в градусы
+        
         float angle_deg = angle_rad * 180.0f / static_cast<float>(constant::PI);
-
-        // 4. Нормализуем угол в диапазон [0, 360)
-        angle_deg = std::fmod(angle_deg + 360.0f, 360.0f);
-
-        return angle_deg;
+        return std::fmod(angle_deg + 360.0f, 360.0f);
     }
 
     float CalculateDynamicRotationAngle(float distance_to_food) {
-        const float max_distance = 200.0f; // Максимальное расстояние, на котором угол поворота будет максимальным
-        const float min_angle = 5.0f; // Минимальный угол поворота
-        const float max_angle = 45.0f; // Максимальный угол поворота
+        const float responsiveness = 0.9f;
+        return agent::ROTATION_ANGLE * (1.0f + responsiveness * (1.0f - weight_));
+    }
 
-        // Линейная интерполяция угла поворота в зависимости от расстояния
-        float angle = max_angle - (distance_to_food / max_distance) * (max_angle - min_angle);
-        return std::clamp(angle, min_angle, max_angle);
+    sf::Vector2f FindGlobalBestFood(const std::vector<sf::Vector2f>& food) {
+        float min_dist = INFINITY;
+        sf::Vector2f best;
+        for (const auto& f : food) {
+            float d = FitnessFunc(position_, f);
+            if (d < min_dist) {
+                min_dist = d;
+                best = f;
+            }
+        }
+        return best;
     }
 };

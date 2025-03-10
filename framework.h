@@ -42,21 +42,16 @@ struct Button {
 };
 
 float CalculateA() {
-    const float max_time_safe = population::MAX_TIME + 1e-5f;
-    const float ratio = population::LOCAL_TIME / max_time_safe;
-
-    const float arg = -ratio + 1.0f;
-    const float clamped_arg = std::clamp(arg, -0.99999f, 0.99999f);
-
-    return std::atanh(clamped_arg);
+    return std::atanh(-(simulation::ITER / static_cast<float>(simulation::MAX_ITERATION)) + 1);
 }
 
 float CalculateVB() {
+    float a = CalculateA();
     return (rand() % 2000 - 1000) / 1000.0f * CalculateA() * simulation::A_DIFFUSION_STRENGTH;
 }
 
 float CalculateVC() {
-    return 0.5f * (1.0f + cos(population::LOCAL_TIME * 0.01f));
+    return 1.0f - simulation::ITER / static_cast<float>(simulation::MAX_ITERATION);
 }
 
 float Distance(const sf::Vector2f& a, const sf::Vector2f& b) {
@@ -81,13 +76,10 @@ float CalculateAgentWeight(const sf::Vector2f& agent_pos, const sf::Vector2f& fo
 
     fitness = (fitness - population::BEST_FITNESS) / (population::WORST_FITNESS - population::BEST_FITNESS);
 
-    float r = 0.5f;
+    float r = ScaleToRange01(Hash(rand()));
     float weight;
-    if (IsTopHalf(fitness))  weight = 1.0f + r * std::log(fitness + 1.0f);
-    else weight = 1.0f - r * std::log(fitness + 1.0f);
-
-    //population::BEST_WEIGHT = std::max(population::BEST_WEIGHT, weight);
-    return weight;
+    if (IsTopHalf(fitness)) return 1.0f + r * std::log(fitness + 1.0f);
+    else return 1.0f - r * std::log(fitness + 1.0f);
 }
 
 float CalculateCombinedWeight(const sf::Vector2f& agent_pos,
@@ -109,10 +101,14 @@ float CalculateCombinedWeight(const sf::Vector2f& agent_pos,
 
 void InitiliseConfig() {
     switch (frame::CURRENT) {
-    case frame::MINI:  config::WIDTH = 320;   config::HEIGHT = 180;   config::NUM_AGENTS = 5000;           break;
-    case frame::SMALL:  config::WIDTH = 500;   config::HEIGHT = 500;   config::NUM_AGENTS = 10'000;      break;
-    case frame::MEDIUM: config::WIDTH = 1280;  config::HEIGHT = 720;   config::NUM_AGENTS = 100'000;    break;
-    case frame::BIG:    config::WIDTH = 1920;  config::HEIGHT = 1080;  config::NUM_AGENTS = 1'000'000;  break;
+    case frame::MINI:   config::WIDTH = 320;   config::HEIGHT = 180;   config::NUM_AGENTS = 5'000;
+        break;
+    case frame::SMALL:  config::WIDTH = 500;   config::HEIGHT = 500;   config::NUM_AGENTS = 10'000;
+        break;
+    case frame::MEDIUM: config::WIDTH = 1280;  config::HEIGHT = 720;   config::NUM_AGENTS = 100'000;
+        break;
+    case frame::BIG:    config::WIDTH = 1920;  config::HEIGHT = 1080;  config::NUM_AGENTS = 1'000'000;
+        break;
     }
 }
 
@@ -206,24 +202,3 @@ void CreateButtons(std::vector<Button>& buttons, const sf::Font& font) {
             agent::SPEED += 1.0f;
         });
 }
-
-/*
-float CalculateAgentWeight(const sf::Vector2f& agent_pos,
-    const sf::Vector2f& food_pos) {
-    float dist = distance(agent_pos, food_pos);
-
-    // Динамическое обновление лучшего/худшего расстояния
-    static float global_min = INFINITY;
-    static float global_max = -INFINITY;
-
-    global_min = std::min(global_min, dist);
-    global_max = std::max(global_max, dist);
-
-    // Нормализация расстояния
-    float normalized = (dist - global_min) / (global_max - global_min + 1e-5f);
-
-    // Формула, стимулирующая нахождение "между" источниками
-    float r = 0.5f;
-    return 1.0f - r * std::log(normalized + 1.0f);
-}
-*/

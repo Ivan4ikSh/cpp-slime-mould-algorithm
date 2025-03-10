@@ -119,8 +119,8 @@ int main() {
             for (auto& agent : agents) {
                 agent->Update(trail_image, food_positions);
             }
-            if (!food_positions.empty()) population::LOCAL_TIME += 0.01f;
-            else population::LOCAL_TIME = 0.0f;
+            if (!food_positions.empty() && simulation::ITER < simulation::MAX_ITERATION) ++simulation::ITER;
+            else simulation::ITER = 1;
 
             sf::Image img = trail_map.getTexture().copyToImage();
             std::for_each(std::execution::par, rows.begin(), rows.end(),
@@ -156,7 +156,9 @@ int main() {
             std::iota(indices.begin(), indices.end(), 0);
             std::for_each(std::execution::par, indices.begin(), indices.end(), [&](size_t i) {
                 agents_vertices[i].position = agents[i]->GetPos();
-                agents_vertices[i].color = agent::COLOR;
+                //agents_vertices[i].color = agent::COLOR;
+
+                //agents_vertices[i].color = sf::Color(100, 100, 100);
 
                 agents_vertices[i].color = sf::Color(
                     10 * agents[i]->GetWeight(),

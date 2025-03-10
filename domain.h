@@ -6,6 +6,7 @@
 #include <execution>
 #include <ctime>
 #include <numeric>
+#include <random>
 #include <iostream>
 #include <functional>
 
@@ -23,7 +24,6 @@ namespace config {
     unsigned HEIGHT;
     unsigned NUM_AGENTS;
 };
-
 
 namespace constant {
     double ALPHA = 0.001;
@@ -72,19 +72,19 @@ namespace agent {
 }
 
 namespace population {
-    float LOCAL_TIME = 0.0f;
     sf::Vector2f BEST_POSITION = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
     float BEST_FITNESS = std::numeric_limits<float>::max();
     float WORST_FITNESS = std::numeric_limits<float>::min();
-    //float BEST_WEIGHT = std::numeric_limits<float>::min();
     float MAX_TIME = std::numeric_limits<float>::max();
 };
 
 namespace simulation {
+    int ITER = 1;
+    int MAX_ITERATION = 100'000;
     sf::Vector2f BEST_FOOD_POS = { 0.0f,0.0f };
-    const float DECAY_RATE = 0.9f;
+    const float DECAY_RATE = 0.97f;
     const float BOUNDARY_OFFSET = 0.0f;
-    const float BLUR_STRENGTH = 0.15f;
+    const float BLUR_STRENGTH = 0.1f;
     const float A_DIFFUSION_STRENGTH = 1.0f;
 }
 
