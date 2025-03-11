@@ -1,45 +1,25 @@
 ﻿#pragma once
 #include "domain.h"
 
-struct Button {
-    Button(const sf::Vector2f& position, const std::string& label, const sf::Font& font, std::function<void()> onClick) : action(onClick) {
-        shape.setSize(size);
-        shape.setPosition(position);
-        shape.setFillColor(sf::Color::White);
-        shape.setOutlineThickness(2);
-        shape.setOutlineColor(sf::Color::Black);
+void CreateMaze(sf::RenderTexture& walls_texture) {
+    walls_texture.clear(sf::Color::Transparent);
 
-        text.setFont(font);
-        text.setString(label);
-        text.setCharacterSize(16);
-        text.setFillColor(sf::Color::Black);
-        sf::FloatRect textBounds = text.getLocalBounds();
-        text.setOrigin(textBounds.width / 2, textBounds.height / 2);
-        text.setPosition(position.x + size.x / 2, position.y + size.y / 2);
-    }
+    //sf::Color wall_color = sf::Color(255, 255, 255, 80);
+    sf::Color wall_color = sf::Color::White;
 
-    bool isMouseOver(const sf::RenderWindow& window) const {
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-        return shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos));
-    }
-
-    void draw(sf::RenderWindow& window) const {
-        window.draw(shape);
-        window.draw(text);
-    }
-
-    void handleEvent(const sf::Event& event, const sf::RenderWindow& window) {
-        if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left &&
-            isMouseOver(window)) {
-            action();
+    for (int y = 0; y < maze::MAZE.size(); ++y) {
+        for (int x = 0; x < maze::MAZE[0].size(); ++x) {
+            if (maze::MAZE[y][x] == 1) {
+                sf::RectangleShape wall(sf::Vector2f(maze::CELL_SIZE, maze::CELL_SIZE));
+                wall.setPosition(x * maze::CELL_SIZE, y * maze::CELL_SIZE);
+                wall.setFillColor(wall_color);
+                walls_texture.draw(wall);
+            }
         }
     }
 
-    sf::Vector2f size = { 80, 30 };
-    sf::RectangleShape shape;
-    sf::Text text;
-    std::function<void()> action;
-};
+    walls_texture.display();
+}
 
 float CalculateA() {
     return std::atanh(-(simulation::ITER / static_cast<float>(simulation::MAX_ITERATION)) + 1);
@@ -102,9 +82,8 @@ float CalculateCombinedWeight(const sf::Vector2f& agent_pos,
 void InitiliseConfig() {
     switch (frame::CURRENT) {
     case frame::MINI:   config::WIDTH = 320;   config::HEIGHT = 180;   config::NUM_AGENTS = 5'000;
-    //case frame::MINI:   config::WIDTH = 200;   config::HEIGHT = 200;   config::NUM_AGENTS = 800;
         break;
-    case frame::SMALL:  config::WIDTH = 500;   config::HEIGHT = 500;   config::NUM_AGENTS = 10'000;
+    case frame::SMALL:  config::WIDTH = 640;   config::HEIGHT = 480;   config::NUM_AGENTS = 20'000;
         break;
     case frame::MEDIUM: config::WIDTH = 1280;  config::HEIGHT = 720;   config::NUM_AGENTS = 100'000;
         break;
@@ -181,25 +160,13 @@ std::pair<sf::Vector2f, float> InitiliseMode() {
     default:
         break;
     }
+    //if (mode::IS_MAZE) {
+    //    position = {
+    //            static_cast<float>(maze::WALL_THICKNESS + 10.0f),
+    //            static_cast<float>(config::HEIGHT - maze::WALL_THICKNESS - 10.0f)
+    //    };
+    //    heading = static_cast<float>(rand() % 360);
+    //}
+
     return { position, heading };
-}
-
-void CreateButtons(std::vector<Button>& buttons, const sf::Font& font) {
-    buttons.emplace_back(
-        sf::Vector2f(config::WIDTH - 200, 10), "+Speed", font, []() {
-            agent::SPEED += 0.5f;
-        });
-
-    buttons.emplace_back(
-        sf::Vector2f(config::WIDTH - 100, 10), "-Speed", font, []() {
-            agent::SPEED = std::max(0.1f, agent::SPEED - 0.5f);
-        });
-    buttons.emplace_back(
-        sf::Vector2f(config::WIDTH - 200, 50), "Pause", font, []() {
-            agent::SPEED = 0;
-        });
-    buttons.emplace_back(
-        sf::Vector2f(config::WIDTH - 100, 50), "Resume", font, []() {
-            agent::SPEED += 1.0f;
-        });
 }

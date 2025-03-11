@@ -1,4 +1,5 @@
 #include "domain.h"
+#include "framework.h"
 #include "agent.h"
 
 int main() {
@@ -17,9 +18,6 @@ int main() {
         !blur.second.loadFromMemory(shader::VERTICAL_BLUR, sf::Shader::Fragment)) {
         return EXIT_FAILURE;
     }
-
-    std::vector<Button> buttons;
-    CreateButtons(buttons, font);
 
     sf::Text fps_text;
     fps_text.setFont(font);
@@ -46,21 +44,21 @@ int main() {
     sf::Clock fps_update_clock;
     std::vector<sf::Vector2f> food_positions;
 
-    // В основном коде
     std::vector<Agent*> agents;
-
-    // Сначала создаем всех агентов
     std::vector<Agent> agent_storage;
     agent_storage.reserve(config::NUM_AGENTS);
     for (size_t i = 0; i < config::NUM_AGENTS; ++i) {
         agent_storage.emplace_back(agents);
     }
 
-    // Затем заполняем вектор указателей
     agents.reserve(config::NUM_AGENTS);
     for (auto& agent : agent_storage) {
         agents.push_back(&agent);
     }
+
+    sf::RenderTexture walls_texture;
+    walls_texture.create(config::WIDTH, config::HEIGHT);
+    CreateMaze(walls_texture);
 
     bool is_paused = true;
     while (window.isOpen()) {
@@ -166,9 +164,9 @@ int main() {
                     255
                 );
                 });
+            trail_map.draw(agents_vertices, render_states);
+            trail_map.display();
         }
-        trail_map.draw(agents_vertices, render_states);
-        trail_map.display();
 
         float delta_time = clock.restart().asSeconds();
         if (delta_time > 0) {
@@ -183,18 +181,19 @@ int main() {
             fps_update_clock.restart();
         }
 
+
         window.clear();
         window.draw(sf::Sprite(trail_map.getTexture()));
+        if (mode::IS_MAZE) window.draw(sf::Sprite(walls_texture.getTexture()));
+
         window.draw(fps_text);
+
         sf::CircleShape food_shape(food::RADIUS);
         food_shape.setFillColor(food::COLOR);
         for (const auto& pos : food_positions) {
             food_shape.setPosition(pos);
             window.draw(food_shape);
         }
-        //for (const auto& button : buttons) {
-        //    button.draw(window);
-        //}
         sf::CircleShape best_pos_shape(food::RADIUS / 2.0f);
         best_pos_shape.setPosition({ population::BEST_POSITION.x + best_pos_shape.getRadius(), population::BEST_POSITION.y + best_pos_shape.getRadius() });
         best_pos_shape.setFillColor(sf::Color::Red);

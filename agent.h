@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "domain.h"
-#include "random-hash.h"
 #include "framework.h"
 
 class Agent {
@@ -21,14 +20,12 @@ public:
             float fitness = std::numeric_limits<float>::max();
             for (const auto& food : food_positions) {
                 float fitness_func = FitnessFunc(position_, food);
-                if (fitness_func < fitness) {
-                    fitness = fitness_func;
-                }
+                if (fitness_func < fitness) fitness = fitness_func;
             }
             population::BEST_FITNESS = std::min(population::BEST_FITNESS, fitness);
 
 
-            const float p = tanh(std::abs(population::BEST_FITNESS - fitness)); // Учитываем минимизацию
+            const float p = tanh(std::abs(population::BEST_FITNESS - fitness));
             const float random = ScaleToRange01(Hash(rand()));
 
             const sf::Vector2f XA = GetRandomAgentPosition();
@@ -61,7 +58,6 @@ private:
     float sin_heading_;
     sf::Vector2f position_;
     sf::Vector2f choosen_food_position_;
-    float choosen_food_direction_;
     Sensor sensor_;
     float weight_;
 
@@ -70,16 +66,76 @@ private:
         new_position.x += cos_heading_ * agent::SPEED;
         new_position.y += sin_heading_ * agent::SPEED;
 
-        if (new_position.x < 0 || new_position.x >= config::WIDTH || new_position.y < 0 || new_position.y >= config::HEIGHT) {
-            if (new_position.x < 0) new_position.x += config::WIDTH;
-            else if (new_position.x >= config::WIDTH) new_position.x -= config::WIDTH;
+        if (mode::IS_MAZE && IsWallCollision(new_position)) {
+            int cell_x = static_cast<int>(position_.x / maze::CELL_SIZE);
+            int cell_y = static_cast<int>(position_.y / maze::CELL_SIZE);
 
-            if (new_position.y < 0) new_position.y += config::HEIGHT;
-            else if (new_position.y >= config::HEIGHT) new_position.y -= config::HEIGHT;
+            float cell_left = cell_x * maze::CELL_SIZE;
+            float cell_right = cell_left + maze::CELL_SIZE;
+            float cell_top = cell_y * maze::CELL_SIZE;
+            float cell_bottom = cell_top + maze::CELL_SIZE;
+
+            bool hit_left = (new_position.x < cell_left && position_.x >= cell_left);
+            bool hit_right = (new_position.x > cell_right && position_.x <= cell_right);
+            bool hit_top = (new_position.y < cell_top && position_.y >= cell_top);
+            bool hit_bottom = (new_position.y > cell_bottom && position_.y <= cell_bottom);
+
+            float random_angle = ((rand() % 41) - 20);
+
+            if (hit_left) new_position.x += maze::CELL_SIZE / 10 + 1;
+            if (hit_right) new_position.x -= maze::CELL_SIZE / 10 + 1;
+            if (hit_top) new_position.y += maze::CELL_SIZE / 10 + 1;
+            if (hit_bottom) new_position.y -= maze::CELL_SIZE / 10 + 1;
+
+            if (hit_left || hit_right) {
+                heading_ = 180 - heading_ + random_angle;
+            }
+            else if (hit_top || hit_bottom) {
+                heading_ = 360 - heading_ + random_angle;
+            }
+
+            if (heading_ < 0) heading_ += 360;
+            if (heading_ >= 360) heading_ -= 360;
+            weight_ = 0.0f;
         }
-        position_ = new_position;
+
+        if (IsBodrer(new_position)) {
+            if (mode::IS_POLLING) {
+                float random_angle = ((rand() % 41) - 20);
+
+                if (new_position.x < 0 || new_position.x >= config::WIDTH) heading_ = 180 - heading_ + random_angle;
+                else heading_ = 360 - heading_ + random_angle;
+
+                if (heading_ < 0) heading_ += 360;
+                if (heading_ >= 360) heading_ -= 360;
+
+                if (new_position.x < 0) new_position.x = 1;
+                else if (new_position.x >= config::WIDTH) new_position.x = config::WIDTH - 2;
+
+                if (new_position.y < 0) new_position.y = 1;
+                else if (new_position.y >= config::HEIGHT) new_position.y = config::HEIGHT - 2;
+            }
+            else {
+                if (new_position.x < 0) new_position.x += config::WIDTH;
+                else if (new_position.x >= config::WIDTH) new_position.x -= config::WIDTH;
+
+                if (new_position.y < 0) new_position.y += config::HEIGHT;
+                else if (new_position.y >= config::HEIGHT) new_position.y -= config::HEIGHT;
+            }
+            weight_ = 0.0f;
+        }
+        if (mode::IS_RUN) position_ = new_position;
 
         FollowPheromoneGradient(trail_map, food_positions);
+    }
+    
+    bool IsWallCollision(const sf::Vector2f& position) const {
+        int cell_x = static_cast<int>(position.x / maze::CELL_SIZE);
+        int cell_y = static_cast<int>(position.y / maze::CELL_SIZE);
+
+        if (cell_x <= 0 || cell_x >= maze::MAZE[0].size() || cell_y <= 0 || cell_y >= maze::MAZE.size()) return true;
+
+        return maze::MAZE[cell_y][cell_x] == 1;
     }
 
     void FollowPheromoneGradient(sf::Image& trail_map, const std::vector<sf::Vector2f>& food_positions) {
@@ -189,5 +245,9 @@ private:
             }
         }
         return best;
+    }
+
+    bool IsBodrer(sf::Vector2f position) {
+        return position.x < 0 || position.x >= config::WIDTH || position.y < 0 || position.y >= config::HEIGHT;
     }
 };
