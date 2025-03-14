@@ -52,7 +52,7 @@ namespace mode {
         TWO_POINTS,
         THREE_POINTS
     };
-    Type CURRENT = NOISE;
+    Type CURRENT = CIRCLE;
 }
 
 namespace frame {
@@ -78,20 +78,21 @@ namespace agent {
 }
 
 namespace population {
-    sf::Vector2f BEST_POSITION = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-    float BEST_FITNESS = std::numeric_limits<float>::max();
-    float WORST_FITNESS = std::numeric_limits<float>::min();
-    float MAX_TIME = std::numeric_limits<float>::max();
+    sf::Vector2f BEST_POSITION;
+    float BEST_FITNESS;
+    float WORST_FITNESS;
 };
 
 namespace simulation {
     int ITER = 1;
-    int MAX_ITERATION =  10;
+    int MAX_ITERATION = 10;
     sf::Vector2f BEST_FOOD_POS = { 0.0f,0.0f };
-    const float DECAY_RATE = 0.95f;
+    const float DECAY_RATE = 0.97f;
     const float BOUNDARY_OFFSET = 0.0f;
-    const float BLUR_STRENGTH = 0.1f;
+    const float BLUR_STRENGTH = 0.2f;
     const float A_DIFFUSION_STRENGTH = 1.0f;
+    const float ANGLE_RESPONSIVNESS = 0.1f;
+
 }
 
 namespace shader {

@@ -39,7 +39,7 @@ float Distance(const sf::Vector2f& a, const sf::Vector2f& b) {
 }
 
 float FitnessFunc(const sf::Vector2f& a, const sf::Vector2f& b) {
-    return static_cast<float>(std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2)));
+    return Distance(a, b);
 }
 
 bool IsTopHalf(float current_fitness) {
@@ -71,7 +71,7 @@ float CalculateCombinedWeight(const sf::Vector2f& agent_pos,
 
     for (const auto& food : food_sources) {
         float w = CalculateAgentWeight(agent_pos, food);
-        float influence = 1.0f / FitnessFunc(agent_pos, food);
+        float influence = FitnessFunc(agent_pos, food);
         total_weight += w * influence;
         sum_influence += influence;
     }
@@ -138,7 +138,7 @@ std::pair<sf::Vector2f, float> InitiliseMode() {
             position = { static_cast<float>(config::WIDTH / 3),  static_cast<float>(config::HEIGHT / 2) };
         }
         else {
-            position = { static_cast<float>(2*config::WIDTH / 3),  static_cast<float>(config::HEIGHT / 2) };
+            position = { static_cast<float>(2 * config::WIDTH / 3),  static_cast<float>(config::HEIGHT / 2) };
         }
         break;
     }

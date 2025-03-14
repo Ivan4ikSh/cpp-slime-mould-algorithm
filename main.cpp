@@ -1,4 +1,4 @@
-#include "domain.h"
+п»ї#include "domain.h"
 #include "framework.h"
 #include "agent.h"
 
@@ -82,10 +82,10 @@ int main() {
                         }
 
                         output_file.close();
-                        std::cout << "Данные успешно сохранены в agents_data.csv\n";
+                        std::cout << "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ agents_data.csv\n";
                     }
                     else {
-                        std::cerr << "Ошибка открытия файла!\n";
+                        std::cerr << "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ!\n";
                     }
                 }
                 if (event.key.code == sf::Keyboard::Space) {
@@ -94,16 +94,16 @@ int main() {
                 }
             }
             if (event.type == sf::Event::MouseButtonPressed) {
-                sf::Vector2f mouse_pos = window.mapPixelToCoords( { event.mouseButton.x, event.mouseButton.y } );
+                sf::Vector2f mouse_pos = window.mapPixelToCoords({ event.mouseButton.x, event.mouseButton.y });
 
                 if (event.mouseButton.button == sf::Mouse::Left) {
                     food_positions.push_back({ mouse_pos.x - food::RADIUS, mouse_pos.y - food::RADIUS });
                 }
 
                 if (event.mouseButton.button == sf::Mouse::Right && !food_positions.empty()) {
-                    float min_dist = 25.0f; // Радиус удаления
+                    float min_dist = 25.0f; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     auto closest = std::min_element(food_positions.begin(), food_positions.end(), [&](const sf::Vector2f& a, const sf::Vector2f& b) {
-                            return Distance(mouse_pos, a) < Distance(mouse_pos, b);
+                        return Distance(mouse_pos, a) < Distance(mouse_pos, b);
                         });
 
                     if (Distance(mouse_pos, *closest) <= min_dist) {
@@ -186,7 +186,7 @@ int main() {
         window.draw(sf::Sprite(trail_map.getTexture()));
         if (mode::IS_MAZE) window.draw(sf::Sprite(walls_texture.getTexture()));
 
-        window.draw(fps_text);
+        //window.draw(fps_text);
 
         sf::CircleShape food_shape(food::RADIUS);
         food_shape.setFillColor(food::COLOR);
@@ -197,7 +197,7 @@ int main() {
         sf::CircleShape best_pos_shape(food::RADIUS / 2.0f);
         best_pos_shape.setPosition({ population::BEST_POSITION.x + best_pos_shape.getRadius(), population::BEST_POSITION.y + best_pos_shape.getRadius() });
         best_pos_shape.setFillColor(sf::Color::Red);
-        window.draw(best_pos_shape);
+        //window.draw(best_pos_shape);
         window.display();
     }
 
